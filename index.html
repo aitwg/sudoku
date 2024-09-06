@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sudoku Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f5;
+        }
+        .game-container {
+            width: 100%;
+            max-width: 400px;
+            padding: 10px;
+            box-sizing: border-box;
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+        .sudoku-grid {
+            display: grid;
+            grid-template-columns: repeat(9, 1fr);
+            gap: 2px;
+            margin-bottom: 20px;
+        }
+        .sudoku-cell {
+            width: 100%;
+            padding-bottom: 100%; /* 1:1 aspect ratio */
+            position: relative;
+        }
+        .sudoku-cell input, .sudoku-cell div {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100%;
+            height: 100%;
+            font-size: 1.5rem;
+            text-align: center;
+            border: 1px solid #333;
+            box-sizing: border-box;
+            line-height: 1.5rem;
+        }
+        input {
+            font-size: 1.5rem;
+            text-align: center;
+            border: none;
+            background-color: white;
+        }
+        button {
+            margin-top: 10px;
+            padding: 10px;
+            font-size: 18px;
+            background-color: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 48%;
+            box-sizing: border-box;
+        }
+        button:hover {
+            background-color: #357abd;
+        }
+        .status {
+            margin-top: 10px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>Sudoku Game</h1>
+        <div class="sudoku-grid" id="sudokuGrid"></div>
+        <div>
+            <button onclick="checkSolution()">Check Solution</button>
+            <button onclick="resetGame()">Reset Game</button>
+        </div>
+        <div class="status" id="status">Good luck!</div>
+    </div>
+
+    <script>
+        const sudokuGrid = document.getElementById('sudokuGrid');
+        const statusText = document.getElementById('status');
+        let initialPuzzle = [
+            [5, 3, null, null, 7, null, null, null, null],
+            [6, null, null, 1, 9, 5, null, null, null],
+            [null, 9, 8, null, null, null, null, 6, null],
+            [8, null, null, null, 6, null, null, null, 3],
+            [4, null, null, 8, null, 3, null, null, 1],
+            [7, null, null, null, 2, null, null, null, 6],
+            [null, 6, null, null, null, null, 2, 8, null],
+            [null, null, null, 4, 1, 9, null, null, 5],
+            [null, null, null, null, 8, null, null, 7, 9]
+        ];
+
+        function createGrid(puzzle) {
+            sudokuGrid.innerHTML = '';
+            for (let row = 0; row < 9; row++) {
+                for (let col = 0; col < 9; col++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add('sudoku-cell');
+
+                    if (puzzle[row][col] !== null) {
+                        cell.innerHTML = `<div>${puzzle[row][col]}</div>`;
+                    } else {
+                        const input = document.createElement('input');
+                        input.type = 'text';
+                        input.maxLength = 1;
+                        input.setAttribute('data-row', row);
+                        input.setAttribute('data-col', col);
+                        input.oninput = validateInput;
+                        cell.appendChild(input);
+                    }
+
+                    sudokuGrid.appendChild(cell);
+                }
+            }
+        }
+
+        function validateInput(event) {
+            const value = event.target.value;
+            if (!/^[1-9]$/.test(value)) {
+                event.target.value = '';
+            }
+        }
+
+        function getCurrentGrid() {
+            const grid = [];
+            for (let row = 0; row < 9; row++) {
+                grid[row] = [];
+                for (let col = 0; col < 9; col++) {
+                    const cell = sudokuGrid.children[row * 9 + col];
+                    const input = cell.querySelector('input');
+                    grid[row][col] = input ? (input.value ? parseInt(input.value) : null) : parseInt(cell.textContent);
+                }
+            }
+            return grid;
+        }
+
+        function isValidRow(grid, row) {
+            const seen = new Set();
+            for (let col = 0; col < 9; col++) {
+                const value = grid[row][col];
+                if (value !== null) {
+                    if (seen.has(value)) return false;
+                    seen.add(value);
+                }
+            }
+            return true;
+        }
+
+        function isValidCol(grid, col) {
+            const seen = new Set();
+            for (let row = 0; row < 9; row++) {
+                const value = grid[row][col];
+                if (value !== null) {
+                    if (seen.has(value)) return false;
+                    seen.add(value);
+                }
+            }
+            return true;
+        }
+
+        function isValidBox(grid, startRow, startCol) {
+            const seen = new Set();
+            for (let row = 0; row < 3; row++) {
+                for (let col = 0; col < 3; col++) {
+                    const value = grid[startRow + row][startCol + col];
+                    if (value !== null) {
+                        if (seen.has(value)) return false;
+                        seen.add(value);
+                    }
+                }
+            }
+            return true;
+        }
+
+        function isValidGrid(grid) {
+            for (let row = 0; row < 9; row++) {
+                if (!isValidRow(grid, row)) return false;
+            }
+            for (let col = 0; col < 9; col++) {
+                if (!isValidCol(grid, col)) return false;
+            }
+            for (let row = 0; row < 9; row += 3) {
+                for (let col = 0; col < 9; col += 3) {
+                    if (!isValidBox(grid, row, col)) return false;
+                }
+            }
+            return true;
+        }
+
+        function checkSolution() {
+            const currentGrid = getCurrentGrid();
+            if (isValidGrid(currentGrid)) {
+                statusText.textContent = 'Congratulations! Your solution is correct!';
+            } else {
+                statusText.textContent = 'Oops! There is a mistake. Keep trying!';
+            }
+        }
+
+        function resetGame() {
+            createGrid(initialPuzzle);
+            statusText.textContent = 'Good luck!';
+        }
+
+        createGrid(initialPuzzle);
+    </script>
+</body>
+</html>
